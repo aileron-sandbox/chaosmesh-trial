@@ -34,6 +34,7 @@ jobs:
           kubectl create ns chaos-mesh
           helm install chaos-mesh chaos-mesh/chaos-mesh -n=chaos-mesh --set chaosDaemon.runtime=containerd --set chaosDaemon.socketPath=/run/containerd/containerd.sock
           kubectl get pods --namespace chaos-mesh -l app.kubernetes.io/instance=chaos-mesh
+          sleep 10
       - name: Deploy apps
         run: |
           kubectl apply -f fortio/fortio_deploy.yaml
@@ -43,4 +44,5 @@ jobs:
       - name: Run k6
         run: |
           sudo snap install k6
+          sleep 10
           k6 run --quiet --summary-trend-stats "min,avg,med,max,p(90),p(95),p(96),p(97),p(98),p(99),p(99.9),p(99.99),p(100)" k6/script.js
