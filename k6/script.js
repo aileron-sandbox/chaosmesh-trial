@@ -7,7 +7,7 @@ export const options = {
         measure: {
             executor: 'constant-arrival-rate',
             exec: "measure",
-            rate: 2000,
+            rate: 1000,
             timeUnit: '1s',
             duration: '180s',
             preAllocatedVUs: 500,
