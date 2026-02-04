@@ -1,0 +1,55 @@
+apiVersion: core/v1
+kind: Entrypoint
+spec:
+  defaultLogger:
+    apiVersion: core/v1
+    kind: SLogger
+  runners:
+    - apiVersion: core/v1
+      kind: HTTPServer
+
+---
+apiVersion: core/v1
+kind: SLogger
+spec:
+  level: Debug
+  logOutput:
+    outputTarget: File
+    logDir: ./logs
+
+---
+apiVersion: core/v1
+kind: HTTPServer
+spec:
+  addr: ":8080"
+  virtualHosts:
+    - hosts: []
+      middleware:
+        - apiVersion: core/v1
+          kind: HTTPLogger
+      handlers:
+        - handler:
+            apiVersion: core/v1
+            kind: ReverseProxyHandler
+
+---
+apiVersion: core/v1
+kind: ReverseProxyHandler
+spec:
+  loadBalancers:
+    - pathMatcher:
+        match: "/"
+        matchType: Prefix
+      upstreams:
+        - url: http://fortio:8080
+
+---
+apiVersion: core/v1
+kind: HTTPLogger
+spec:
+  request:
+    headers:
+      - name: "*"
+  response:
+    headers:
+      - name: "*"

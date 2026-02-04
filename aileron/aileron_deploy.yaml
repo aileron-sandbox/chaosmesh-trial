@@ -1,0 +1,117 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aileron
+  labels:
+    app: aileron
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: aileron
+  template:
+    metadata:
+      labels:
+        app: aileron
+    spec:
+      containers:
+        - name: aileron
+          image: ghcr.io/aileron-gateway/aileron-gateway/aileron:v1.1.0-debug-nonroot
+          ports:
+            - containerPort: 8080
+          command: ["aileron"]
+          args: ["-f", "/ko-app/config.yaml"]
+          resources:
+            limits:
+              memory: "100Mi"
+              cpu: "500m"
+          volumeMounts:
+            - name: aileron-logs
+              mountPath: /ko-app/logs
+            - name: aileron-config-volume
+              mountPath: /ko-app/config.yaml
+              subPath: config.yaml  # ConfigMap のキー名を指定
+      volumes:
+        - name: aileron-logs
+          hostPath:
+            path: /mnt/aileron
+        - name: aileron-config-volume
+          configMap:
+            name: aileron-conf
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aileron
+spec:
+  type: NodePort
+  selector:
+    app: aileron
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30081
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aileron-conf
+data:
+  config.yaml: |+
+    apiVersion: core/v1
+    kind: Entrypoint
+    spec:
+      defaultLogger:
+        apiVersion: core/v1
+        kind: SLogger
+      runners:
+        - apiVersion: core/v1
+          kind: HTTPServer
+
+    ---
+    apiVersion: core/v1
+    kind: SLogger
+    spec:
+      level: Debug
+      logOutput:
+        outputTarget: File
+        logDir: ./logs
+
+    ---
+    apiVersion: core/v1
+    kind: HTTPServer
+    spec:
+      addr: ":8080"
+      virtualHosts:
+        - hosts: []
+          middleware:
+            - apiVersion: core/v1
+              kind: HTTPLogger
+          handlers:
+            - handler:
+                apiVersion: core/v1
+                kind: ReverseProxyHandler
+
+    ---
+    apiVersion: core/v1
+    kind: ReverseProxyHandler
+    spec:
+      loadBalancers:
+        - pathMatcher:
+            match: "/"
+            matchType: Prefix
+          upstreams:
+            - url: http://fortio:8080
+
+    ---
+    apiVersion: core/v1
+    kind: HTTPLogger
+    spec:
+      request:
+        headers:
+          - name: "*"
+      response:
+        headers:
+          - name: "*"

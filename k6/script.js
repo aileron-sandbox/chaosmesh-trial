@@ -1,0 +1,54 @@
+import http from "k6/http";
+import { check } from "k6";
+import { Rate } from "k6/metrics";
+
+export const options = {
+    scenarios: {
+        measure: {
+            executor: 'constant-arrival-rate',
+            exec: "measure",
+            rate: 500,
+            timeUnit: '1s',
+            duration: '180s',
+            preAllocatedVUs: 300,
+            maxVUs: 1000,
+        },
+    },
+    thresholds: {
+        "http_req_duration": [
+            "p(90) < 3",
+            "p(95) < 5",
+            "p(99) < 20",
+        ],
+        "http_000_rate": ["rate == 0.00"],
+        "http_200_rate": ["rate > 0.95"],
+        "http_500_rate": ["rate < 0.05"],
+    }
+};
+
+const rate000 = new Rate("http_000_rate"); // Not 200, 500
+const rate200 = new Rate("http_200_rate");
+const rate500 = new Rate("http_500_rate");
+
+export function measure() {
+    // const url = "http://aileron:8080/debug";
+    const url = "http://localhost:30081/debug";
+    const payload = JSON.stringify({
+        id: 123,
+        name: "dummy",
+        timestamp: Date.now(),
+    });
+    const params = {
+        headers: {
+            "Content-Type": "application/json",
+        },
+    };
+
+    let res = http.post(url, payload, params);
+    rate200.add(res.status === 200);
+    rate500.add(res.status === 500);
+    rate000.add(!(res.status === 200 || res.status === 500));
+    check(res, {
+        "status is 200 or 500": (r) => r.status === 200 || r.status === 500,
+    });
+}

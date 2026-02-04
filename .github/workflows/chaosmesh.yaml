@@ -1,0 +1,44 @@
+name: ChaosMesh
+
+on:
+  workflow_dispatch: {}
+  push: {}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create kind cluster
+        run: |
+          curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.30.0/kind-linux-amd64
+          chmod +x ./kind
+          mv ./kind /usr/local/bin/kind
+          kind create cluster --config kind-cluster.yaml --wait 10m --verbosity=6
+      - name: Install kubectl
+        run: |
+          curl -LO "https://dl.k8s.io/release/v1.34.0/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          mv kubectl /usr/local/bin/
+      - name: Install helm
+        run: |
+          curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+          chmod 700 get_helm.sh
+          ./get_helm.sh
+          helm version
+      - name: Install ChaosMesh
+        run: |
+          helm repo add chaos-mesh https://charts.chaos-mesh.org
+          helm search repo chaos-mesh
+          kubectl create ns chaos-mesh
+          helm install chaos-mesh chaos-mesh/chaos-mesh -n=chaos-mesh --set chaosDaemon.runtime=containerd --set chaosDaemon.socketPath=/run/containerd/containerd.sock
+          kubectl get pods --namespace chaos-mesh -l app.kubernetes.io/instance=chaos-mesh
+      - name: Deploy apps
+        run: |
+          kubectl apply -f fortio/fortio_deploy.yaml
+          kubectl apply -f aileron/aileron_deploy.yaml
+      - name: Run k6
+        run: |
+          sudo snap install k6
+          k6 run --quiet --summary-trend-stats "min,avg,med,max,p(90),p(95),p(96),p(97),p(98),p(99),p(99.9),p(99.99),p(100)" k6/script.js
