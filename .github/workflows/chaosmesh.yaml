@@ -43,7 +43,7 @@ jobs:
           kubectl wait --timeout=60s --for=condition=available deployment/fortio
           kubectl wait --timeout=60s --for=condition=available deployment/aileron
       - name: Apply chaos
-        run: kubectl apply -f experiments/kill-two-pods.yaml
+        run: kubectl apply -f experiments/kill-one-pod.yaml
       - name: Run k6
         run: |
           sudo snap install k6
