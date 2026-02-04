@@ -38,6 +38,8 @@ jobs:
         run: |
           kubectl apply -f fortio/fortio_deploy.yaml
           kubectl apply -f aileron/aileron_deploy.yaml
+      - name: Apply chaos
+        run: kubectl apply -f experiments/kill-one-pod.yaml
       - name: Run k6
         run: |
           sudo snap install k6

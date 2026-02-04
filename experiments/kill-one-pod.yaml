@@ -1,0 +1,19 @@
+kind: Schedule
+apiVersion: chaos-mesh.org/v1alpha1
+metadata:
+  namespace: default
+  name: kill-one-pod
+spec:
+  schedule: '*/10 * * * * *'
+  startingDeadlineSeconds: null
+  concurrencyPolicy: Forbid
+  historyLimit: 1
+  type: PodChaos
+  podChaos:
+    selector:
+      namespaces:
+        - default
+      labelSelectors:
+        app: fortio
+    mode: one
+    action: pod-kill
