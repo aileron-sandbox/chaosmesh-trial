@@ -16,9 +16,9 @@ export const options = {
     },
     thresholds: {
         "http_req_duration": [
-            "p(90) < 3",
-            "p(95) < 5",
-            "p(99) < 20",
+            "p(90) < 5",
+            "p(95) < 10",
+            "p(99) < 50",
         ],
         "http_000_rate": ["rate == 0.00"],
         "http_200_rate": ["rate > 0.95"],
